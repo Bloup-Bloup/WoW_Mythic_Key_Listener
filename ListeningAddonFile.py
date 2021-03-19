@@ -87,9 +87,15 @@ def save_path(path_to_account):
 
 
 def search_addon_file(dict_char, path_to_account):
-    url = 'https://discord.com/api/webhooks/817475434798383164/ehyRHiluZzYrkNsLNM2oedhAaBN3Ir47b3Vw-2b9GdEJaO6C9HXuBnNMmvkoXY3_bMmQ'
+    """
+    Search for mythic key from each character, check in database if it exist. Then update or insert into database and send in json format to discord channel throught webhook.
+    :param dict_char:
+    :param path_to_account:
+    """
+    url = 'enter your webhook token here'
     for realm in dict_char:
         for char in dict_char[realm]:
+	    # Check if SavedVariables folder is in char folder
             if 'SavedVariables' in os.listdir(
                     f"{path_to_account + realm}\\{char}") and "Mythic_Keystone_Tracker.lua" in os.listdir(
                 f"{path_to_account + realm}\\{char}\\SavedVariables"):
@@ -109,7 +115,8 @@ def search_addon_file(dict_char, path_to_account):
                     "SELECT * FROM mythic_key")
                 is_exist = cur.fetchall()
                 cur.close()
-
+		
+		# Check if it's a new entry or a update
                 is_name_present = 0
                 is_dungeon_present = 0
                 for name in is_exist:
