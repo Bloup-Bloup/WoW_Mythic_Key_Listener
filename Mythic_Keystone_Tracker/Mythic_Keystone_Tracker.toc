@@ -1,0 +1,8 @@
+## Interface: 90005
+## Title: Mythic_Keystone_Tracker
+## Notes: Track keystone's name from your bag
+## SavedVariablesPerCharacter: name, keyStoneLevel
+## Author: Bl0upBl0up
+## Version: 1.0
+
+Mythic_Keystone_Tracker.lua
