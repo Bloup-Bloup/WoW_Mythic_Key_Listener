@@ -1,6 +1,8 @@
 # WoW_Mythic_Key_Listener
 
 This program will search for mythic key for each chararcter in your account and send it throught discord webhook.
+It will create rows into the database and update or add another next time you using it.
+A config.txt will be created the first time, to store your current wow path and increase speed of the programm for the next time.
 
 First Steps : 
 
