@@ -2,6 +2,8 @@ import os
 import re
 import sqlite3
 import requests
+import string
+import datetime
 
 
 def find_files(filename, search_path):
@@ -86,19 +88,61 @@ def save_path(path_to_account):
         write_in_file.write(path_to_account)
 
 
+def sending_keys():
+    """
+    Send keys to discord
+    """
+    cur.execute("SELECT * FROM mythic_key")
+    content = cur.fetchall()
+    cur.close()
+
+    data = {
+        "embeds": [
+            {
+                "title": "Global keys",
+                "fields": [
+                    {
+                        "name": 'Personnages',
+                        "value": '\n'.join(
+                            i[0] + " - " + i[1] for i in content
+                        ),
+                        "inline": 'true',
+                    },
+                    {
+                        "name": 'Donjon',
+                        "value": '\n'.join(i[2] for i in content),
+                        "inline": 'true',
+                    },
+                    {
+                        "name": 'Level',
+                        "value": '\n'.join(f"+{i[3]}" for i in content),
+                        "inline": 'true',
+                    },
+                ],
+                "color": 7741329,
+                "timestamp": str(datetime.datetime.now()),
+            }
+        ],
+        "username": "Esclave Purotin",
+    }
+
+    url = 'PASTE YOUR WEBHOOK URL HERE'
+    requests.post(url, json=data, headers={"Content-Type": "application/json"})
+
+
 def search_addon_file(dict_char, path_to_account):
     """
-    Search for mythic key from each character, check in database if it exist. Then update or insert into database and send in json format to discord channel throught webhook.
+    Insert or update new data into database and call sending_keys() if data changed
     :param dict_char:
     :param path_to_account:
     """
-    url = 'enter your webhook token here'
+    global cur
+    changed = 0
     for realm in dict_char:
         for char in dict_char[realm]:
-	    # Check if SavedVariables folder is in char folder
             if 'SavedVariables' in os.listdir(
                     f"{path_to_account + realm}\\{char}") and "Mythic_Keystone_Tracker.lua" in os.listdir(
-                f"{path_to_account + realm}\\{char}\\SavedVariables"):
+                    f"{path_to_account + realm}\\{char}\\SavedVariables"):
 
                 # Read the lua file : list object
                 with open(f"{path_to_account + realm}\\{char}\\SavedVariables\\Mythic_Keystone_Tracker.lua", 'r',
@@ -115,8 +159,7 @@ def search_addon_file(dict_char, path_to_account):
                     "SELECT * FROM mythic_key")
                 is_exist = cur.fetchall()
                 cur.close()
-		
-		# Check if it's a new entry or a update
+
                 is_name_present = 0
                 is_dungeon_present = 0
                 for name in is_exist:
@@ -134,34 +177,36 @@ def search_addon_file(dict_char, path_to_account):
                             cur.execute(
                                 'UPDATE mythic_key SET dungeon_name = ?, dungeon_level = ? WHERE charac_name = ? ',
                                 (dungeon[1], level[2], char))
-
-                            data = {
-                                "content": f"{char} - {realm} **```yaml\n{dungeon[1]} + {level[2]}```**",
-                                "username": "Esclave Purotin",
-                            }
-
-                            requests.post(url, json=data, headers={"Content-Type": "application/json"})
+                            changed = 1
 
                     else:
 
                         cur.execute(
                             'INSERT INTO mythic_key VALUES (?, ?, ?, ?)', (char, realm, dungeon[1], level[2]))
-
-                        data = {
-                            "content": f"{char} - {realm} **```yaml\n{dungeon[1]} + {level[2]}```**",
-                            "username": "Esclave Purotin",
-                        }
-
-                        requests.post(url, json=data, headers={"Content-Type": "application/json"})
+                        changed = 1
 
                     conn.commit()
                     cur.close()
 
+    if changed == 1:
+        sending_keys()
 
-with open("config.txt", 'r') as read_file:
-	path_to_account = read_file.read()
-realm_list = search_realmlist(path_to_account)
-dict_char, realm_list = search_character(realm_list, path_to_account)
 
-search_addon_file(dict_char, path_to_account)
+try:
+    with open("config.txt", 'r') as read_file:
+        path_to_account = read_file.read()
+    realm_list = search_realmlist(path_to_account)
+    dict_char, realm_list = search_character(realm_list, path_to_account)
 
+    search_addon_file(dict_char, path_to_account)
+
+except:
+    for letter in string.ascii_uppercase:
+        wow_folder_path = find_files('Config.wtf', f'{letter}:')
+        if wow_folder_path:
+            wow_folder_path_refined = refine_files(wow_folder_path)
+            path_to_account = search_folder_path(wow_folder_path_refined)
+            save_path(path_to_account)
+            realm_list = search_realmlist(path_to_account)
+            dict_char, realm_list = search_character(realm_list, path_to_account)
+            search_addon_file(dict_char, path_to_account)
