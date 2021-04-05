@@ -6,14 +6,14 @@ A config.txt will be created the first time, to store your current wow path and 
 
 First Steps : 
 
-Connect your character in wow and do a /reload or /mkst .
+Connect your character in wow and do a /reload .
 
 Be sure you have python 3.8 installed ( not tested with an other version )
-Modifiy the ListeningAddonFile.py at line 129. Paste your weebhook id.
+Modifiy the ListeningAddonFile.py at line 130. Paste your weebhook id.
 Install the requierement.txt then launch the .py script with >>> 'python3 ListeningAddonFile.py'
 
 
-Next time, simply /reload or /mkst and launch the ListeningAddonFile.py
+Next time, simply /reload and launch the ListeningAddonFile.py
 
 
 You can compile the ListeningAddonFile.py with pyinstaller included in the env folder.
