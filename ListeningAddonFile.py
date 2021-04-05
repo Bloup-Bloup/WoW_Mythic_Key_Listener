@@ -88,10 +88,11 @@ def save_path(path_to_account):
         write_in_file.write(path_to_account)
 
 
-def sending_keys():
+def sending_keys(conn, cur):
     """
     Send keys to discord
     """
+    cur = conn.cursor()
     cur.execute("SELECT * FROM mythic_key")
     content = cur.fetchall()
     cur.close()
@@ -126,7 +127,7 @@ def sending_keys():
         "username": "Esclave Purotin",
     }
 
-    url = 'PASTE YOUR WEBHOOK URL HERE'
+    url = 'ENTER YOUR WEBHOOK ID HERE'
     requests.post(url, json=data, headers={"Content-Type": "application/json"})
 
 
@@ -137,6 +138,7 @@ def search_addon_file(dict_char, path_to_account):
     :param path_to_account:
     """
     global cur
+    conn = sqlite3.connect(r'.\wow_mythic_keys.db')
     changed = 0
     for realm in dict_char:
         for char in dict_char[realm]:
@@ -153,43 +155,46 @@ def search_addon_file(dict_char, path_to_account):
                 dungeon = keystone[1].split('"')
                 level = keystone[2].split(' ')
 
-                conn = sqlite3.connect(r'.\wow_mythic_keys.db')
                 cur = conn.cursor()
                 cur.execute(
-                    "SELECT * FROM mythic_key")
-                is_exist = cur.fetchall()
+                    "SELECT * FROM mythic_key WHERE charac_name = ? AND server_name = ?", (char, realm))
+                data_in_database = cur.fetchall()
                 cur.close()
 
-                is_name_present = 0
-                is_dungeon_present = 0
-                for name in is_exist:
-                    if char == name[0] and realm == name[1]:
-                        is_name_present = 1
-                        if dungeon[1] in name[2] and str(level[2]) in str(name[3]):
-                            is_dungeon_present = 1
-
-                conn = sqlite3.connect(r'.\wow_mythic_keys.db')
-                cur = conn.cursor()
-
                 if 'name = nil' not in dungeon:
-                    if is_name_present == 1:
-                        if is_dungeon_present != 1:
+                    if data_in_database:
+                        if (
+                                dungeon[1] != data_in_database[0][2]
+                                or str(level[2]) != str(data_in_database[0][3])
+                        ) and 'nil' not in level:
+
+                            cur = conn.cursor()
                             cur.execute(
-                                'UPDATE mythic_key SET dungeon_name = ?, dungeon_level = ? WHERE charac_name = ? ',
-                                (dungeon[1], level[2], char))
+                                'UPDATE mythic_key SET dungeon_name = ?, dungeon_level = ? WHERE charac_name = ? AND server_name = ?',
+                                (dungeon[1], level[2], char, realm))
+                            conn.commit()
+                            cur.close()
                             changed = 1
 
-                    else:
+                        elif 'nil' in level:
+                            cur = conn.cursor()
+                            cur.execute(
+                                'DELETE FROM mythic_key WHERE charac_name = ? AND server_name = ?',
+                                (char, realm))
+                            conn.commit()
+                            cur.close()
+                            changed = 1
 
+                    elif 'nil' not in level:
+                        cur = conn.cursor()
                         cur.execute(
                             'INSERT INTO mythic_key VALUES (?, ?, ?, ?)', (char, realm, dungeon[1], level[2]))
+                        conn.commit()
+                        cur.close()
                         changed = 1
-
-                    conn.commit()
-                    cur.close()
-
+    print(changed)
     if changed == 1:
-        sending_keys()
+        sending_keys(conn, cur)
 
 
 try:
@@ -199,7 +204,6 @@ try:
     dict_char, realm_list = search_character(realm_list, path_to_account)
 
     search_addon_file(dict_char, path_to_account)
-
 except:
     for letter in string.ascii_uppercase:
         wow_folder_path = find_files('Config.wtf', f'{letter}:')
